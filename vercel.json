@@ -2,7 +2,6 @@
   "buildCommand": "vite build",
   "outputDirectory": "dist",
   "framework": "vite",
-  "installCommand": "npm install --legacy-peer-deps",
   "rewrites": [
     { "source": "/api/chat", "destination": "/api/chat" },
     { "source": "/api/fetch-url", "destination": "/api/fetch-url" },
