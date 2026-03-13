@@ -528,7 +528,7 @@ export default function WiringGuide() {
             background: groveChecked ? '#0a2a0a' : '#0a1a2e',
             border: `2px solid ${groveChecked ? '#00ff88' : modeData.grovePort.color}66`,
             borderRadius: 12, padding: 20, cursor: 'pointer',
-            transition: 'all 0.3s', position: 'relative', overflow: 'hidden',
+            transition: 'all 0.3s', position: 'relative',
           }}>
           <div style={{ position: 'absolute', top: -10, right: -10, fontSize: 80, opacity: 0.04 }}>🛡️</div>
           <div style={{
