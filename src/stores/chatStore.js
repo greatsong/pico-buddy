@@ -22,6 +22,15 @@ const useChatStore = create((set, get) => ({
 
   addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
 
+  // 스트리밍: 마지막 메시지 텍스트 업데이트
+  updateLastMessage: (text) => set((s) => {
+    const msgs = [...s.messages];
+    if (msgs.length > 0) {
+      msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], text };
+    }
+    return { messages: msgs };
+  }),
+
   setLoading: (loading) => set({ isLoading: loading }),
 
   clearChat: () => set({ messages: [WELCOME_MSG] }),

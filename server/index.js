@@ -7,7 +7,7 @@ const PORT = 4018;
 app.use(cors());
 app.use(express.json());
 
-// Claude API 프록시
+// Claude API 스트리밍 프록시
 app.post('/api/chat', async (req, res) => {
   const { messages, system } = req.body;
 
@@ -22,18 +22,50 @@ app.post('/api/chat', async (req, res) => {
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 1500,
+        stream: true,
         system,
         messages,
       }),
     });
 
-    const data = await response.json();
-
     if (!response.ok) {
+      const data = await response.json();
       return res.status(response.status).json({ error: data.error?.message || 'API 오류' });
     }
 
-    res.json(data);
+    // SSE 스트리밍
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          if (data === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+              res.write(`data: ${JSON.stringify({ text: parsed.delta.text })}\n\n`);
+            }
+          } catch {}
+        }
+      }
+    }
+
+    res.write('data: [DONE]\n\n');
+    res.end();
   } catch (error) {
     console.error('Claude API 오류:', error);
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });
@@ -50,16 +82,14 @@ app.post('/api/fetch-url', async (req, res) => {
     });
     const html = await response.text();
 
-    // HTML에서 텍스트 추출 (간단한 파싱)
     const textContent = html
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
       .replace(/<[^>]+>/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
-      .slice(0, 5000); // 최대 5000자
+      .slice(0, 5000);
 
-    // Claude에게 분석 요청
     const analysisResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {

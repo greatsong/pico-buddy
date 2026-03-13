@@ -29,6 +29,7 @@ const SENSORS = {
     difficulty: 2, lessons: [1, 3, 4],
     description: "온도와 습도를 동시에 측정하는 기본 환경 센서",
     shield: {
+      grovePort: { name: "I2C1", type: "I2C", position: "left-bottom", color: "#00ff88" },
       pins: [
         { sensor: "VCC", pico: 36, picoName: "3.3V", gp: null, wire: "#ff4444", label: "빨강" },
         { sensor: "GND", pico: 38, picoName: "GND", gp: null, wire: "#666666", label: "검정" },
@@ -129,6 +130,7 @@ while True:
     difficulty: 2, lessons: [5],
     description: "이산화탄소 농도를 정밀 측정하는 환경 센서",
     shield: {
+      grovePort: { name: "I2C1", type: "I2C", position: "left-bottom", color: "#00ff88" },
       pins: [
         { sensor: "VCC", pico: 36, picoName: "3.3V", gp: null, wire: "#ff4444", label: "빨강" },
         { sensor: "GND", pico: 38, picoName: "GND", gp: null, wire: "#666666", label: "검정" },
@@ -239,6 +241,7 @@ while True:
     difficulty: 2, lessons: [],
     description: "대기압과 고도를 측정하는 센서",
     shield: {
+      grovePort: { name: "I2C1", type: "I2C", position: "left-bottom", color: "#00ff88" },
       pins: [
         { sensor: "VCC", pico: 36, picoName: "3.3V", gp: null, wire: "#ff4444", label: "빨강" },
         { sensor: "GND", pico: 38, picoName: "GND", gp: null, wire: "#666666", label: "검정" },
@@ -513,6 +516,7 @@ while True:
     difficulty: 1, lessons: [],
     description: "누르면 신호가 가는 스위치예요. LED와 함께 쓰면 재밌어요!",
     shield: {
+      grovePort: { name: "D8", type: "디지털", position: "right-top", color: "#00ccff" },
       pins: [
         { sensor: "SIG", pico: 11, picoName: "GP8", gp: 8, wire: "#ffdd00", label: "노랑" },
         { sensor: "GND", pico: 13, picoName: "GND", gp: null, wire: "#666666", label: "검정" },
@@ -597,6 +601,7 @@ while True:
     difficulty: 1, lessons: [],
     description: "전기 신호로 켜고 끄는 작은 전구예요. Pico의 첫 번째 프로젝트로 딱!",
     shield: {
+      grovePort: { name: "D16", type: "디지털", position: "right-bottom", color: "#00ccff" },
       pins: [
         { sensor: "SIG", pico: 21, picoName: "GP16", gp: 16, wire: "#ffdd00", label: "노랑" },
         { sensor: "GND", pico: 23, picoName: "GND", gp: null, wire: "#666666", label: "검정" },

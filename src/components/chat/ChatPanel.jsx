@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import useAppStore from '../../stores/appStore';
 import useChatStore from '../../stores/chatStore';
 import useProgressStore from '../../stores/progressStore';
-import { callClaude } from '../../lib/api';
+import { callClaudeStream } from '../../lib/api';
 import { buildSystemPrompt } from '../../lib/contextBuilder';
 import { generateChatMarkdown, downloadMarkdown } from '../../lib/chatLogger';
 import { diagnoseError } from '../../data/errorPatterns';
@@ -21,7 +21,7 @@ import ImageUpload from './ImageUpload';
 // AI 튜터 채팅 패널 — 맥락 인식 + 용어 설명 + 에러 진단
 export default function ChatPanel() {
   const { selectedSensor, shieldMode } = useAppStore();
-  const { messages, isLoading, addMessage, setLoading } = useChatStore();
+  const { messages, isLoading, addMessage, updateLastMessage, setLoading } = useChatStore();
   const { learnedTerms, lastSensor, completedSensors, completedChallenges, learnTerm, updateContext } = useProgressStore();
   const [input, setInput] = useState('');
   const [showMistakes, setShowMistakes] = useState(null);
@@ -104,7 +104,7 @@ export default function ChatPanel() {
       return;
     }
 
-    // Claude API 호출
+    // Claude API 스트리밍 호출
     try {
       const systemPrompt = buildSystemPrompt({
         selectedSensor, shieldMode, learnedTerms, lastSensor, completedSensors,
@@ -112,11 +112,19 @@ export default function ChatPanel() {
 
       const apiMessages = messages
         .filter(m => m.role === 'user' || m.role === 'assistant')
-        .slice(-10) // 최근 10개만
+        .slice(-10)
         .map(m => ({ role: m.role, content: m.text }));
       apiMessages.push({ role: 'user', content: userText });
 
-      const reply = await callClaude(apiMessages, systemPrompt);
+      // 빈 메시지 추가 → 스트리밍으로 채워감
+      addMessage({ role: 'assistant', text: '' });
+
+      const reply = await callClaudeStream(apiMessages, systemPrompt, (chunk) => {
+        updateLastMessage(chunk);
+      });
+
+      // 최종 텍스트로 확정
+      updateLastMessage(reply);
 
       // 새 용어 감지 → 학습 기록에 추가
       GLOSSARY_PATTERNS.forEach(term => {
@@ -124,8 +132,6 @@ export default function ChatPanel() {
           learnTerm(term);
         }
       });
-
-      addMessage({ role: 'assistant', text: reply });
     } catch (e) {
       addMessage({
         role: 'assistant',
