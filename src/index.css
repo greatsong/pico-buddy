@@ -84,7 +84,7 @@ body {
 
 .catalog-count {
   font-size: 9px;
-  color: #555;
+  color: #888;
   background: #1a1a2e;
   padding: 2px 6px;
   border-radius: 8px;
@@ -103,7 +103,7 @@ body {
 .catalog-toggle {
   margin-left: auto;
   font-size: 10px;
-  color: #555;
+  color: #888;
 }
 
 /* 카탈로그 패널 (드롭다운) */
@@ -252,7 +252,7 @@ body {
 }
 .card-model {
   font-size: 9px;
-  color: #555;
+  color: #888;
 }
 .card-desc {
   font-size: 9px;
@@ -271,7 +271,7 @@ body {
 }
 .card-diff {
   font-size: 8px;
-  color: #555;
+  color: #888;
   letter-spacing: 1px;
 }
 .card-lessons {
@@ -293,7 +293,7 @@ body {
 .catalog-empty {
   padding: 30px 20px;
   text-align: center;
-  color: #555;
+  color: #888;
   font-size: 12px;
 }
 
@@ -304,7 +304,7 @@ body {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #555;
+  color: #888;
   padding: 20px;
   text-align: center;
   font-size: 14px;
@@ -342,7 +342,7 @@ body {
   border: none;
   cursor: pointer;
   background: transparent;
-  color: #555;
+  color: #888;
   font-size: 11px;
   border-bottom: 2px solid transparent;
   font-family: inherit;
@@ -370,7 +370,7 @@ body {
   cursor: pointer;
   font-size: 10px;
   background: transparent;
-  color: #555;
+  color: #888;
   font-family: inherit;
   transition: all 0.2s;
 }
@@ -394,34 +394,109 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* 태블릿 반응형 (768~1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .left-panel {
+    width: 340px;
+    min-width: 280px;
+  }
+  .tab-bar {
+    padding: 6px 10px;
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    width: calc(50% - 4px);
+    text-align: center;
+    font-size: 10px;
+    padding: 5px 8px;
+  }
+  .mode-toggle {
+    width: 100%;
+    margin-left: 0;
+    margin-top: 4px;
+    justify-content: center;
+  }
+}
+
+/* 모바일 패널 전환 버튼 */
+.mobile-panel-switch {
+  display: none;
+}
+
+/* 모바일 숨김 */
+.mobile-hidden {
+  display: none !important;
+}
+
 /* 모바일 반응형 */
 @media (max-width: 768px) {
   .app-root {
     flex-direction: column;
   }
+  /* 모바일 패널 전환 */
+  .mobile-panel-switch {
+    display: flex;
+    gap: 0;
+    background: #0a0a14;
+    border-bottom: 1px solid #1a1a2e;
+    flex-shrink: 0;
+  }
+  .mobile-switch-btn {
+    flex: 1;
+    padding: 10px 0;
+    border: none;
+    background: transparent;
+    color: #666;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+  }
+  .mobile-switch-btn.active {
+    color: #00ff88;
+    background: #0d1a0d;
+    border-bottom-color: #00ff88;
+  }
+  /* 각 패널이 전체 남은 높이 사용 */
   .left-panel {
     width: 100%;
     min-width: unset;
-    height: 50vh;
+    flex: 1;
+    height: auto;
     border-right: none;
-    border-bottom: 1px solid #1a1a2e;
+    border-bottom: none;
   }
   .right-panel {
-    height: 50vh;
+    flex: 1;
+    height: auto;
   }
+  /* 탭 바 컴팩트 (한 줄 가로 스크롤) */
   .tab-bar {
     padding: 6px 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 4px;
   }
   .tab-btn {
-    font-size: 10px;
-    padding: 4px 8px;
+    white-space: nowrap;
+    text-align: center;
+    font-size: 11px;
+    padding: 5px 10px;
+    flex-shrink: 0;
   }
   .mode-toggle {
-    margin-left: 0;
-    margin-top: 4px;
+    margin-left: auto;
+    flex-shrink: 0;
   }
   .catalog-grid {
     grid-template-columns: 1fr;
+  }
+  .catalog-panel {
+    max-height: 60vh;
+    z-index: 100;
+  }
+  .sensor-catalog {
+    z-index: 100;
   }
 }

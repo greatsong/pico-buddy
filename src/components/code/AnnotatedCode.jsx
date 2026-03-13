@@ -4,7 +4,8 @@ import SENSORS from '../../data/sensors';
 
 // 줄별 설명이 달린 코드 뷰어
 export default function AnnotatedCode() {
-  const { selectedSensor, shieldMode } = useAppStore();
+  const selectedSensor = useAppStore(s => s.selectedSensor);
+  const shieldMode = useAppStore(s => s.shieldMode);
   const [expandedLine, setExpandedLine] = useState(null);
   const [showAllAnnotations, setShowAllAnnotations] = useState(false);
   const [copied, setCopied] = useState(false);

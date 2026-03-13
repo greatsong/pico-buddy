@@ -1,6 +1,30 @@
 import SENSORS, { SENSOR_ORDER } from '../data/sensors';
 import GLOSSARY from '../data/glossary';
 
+// 같은 카테고리 센서 이름만 추출 (토큰 절약)
+function getSameCategorySensorNames(selectedId) {
+  const selectedSensor = SENSORS[selectedId];
+  if (!selectedSensor) return '';
+  const category = selectedSensor.category;
+  const sameCategorySensors = SENSOR_ORDER
+    .filter(id => id !== selectedId && SENSORS[id]?.category === category)
+    .map(id => SENSORS[id].name);
+  if (sameCategorySensors.length === 0) return '';
+  return `같은 "${category}" 카테고리의 다른 센서: ${sameCategorySensors.join(', ')}`;
+}
+
+// 카테고리 목록과 센서 수만 간략 요약 (전체 상세 정보 대신)
+function getCategorySummary() {
+  const categoryCount = {};
+  for (const id of SENSOR_ORDER) {
+    const cat = SENSORS[id]?.category;
+    if (cat) categoryCount[cat] = (categoryCount[cat] || 0) + 1;
+  }
+  return Object.entries(categoryCount)
+    .map(([cat, count]) => `${cat}(${count}종)`)
+    .join(', ');
+}
+
 // AI에게 보낼 시스템 프롬프트에 현재 맥락 주입
 export function buildSystemPrompt({ selectedSensor, shieldMode, learnedTerms, lastSensor, completedSensors }) {
   const mode = shieldMode ? 'Grove Shield' : '직접연결(점퍼선)';
@@ -21,11 +45,11 @@ export function buildSystemPrompt({ selectedSensor, shieldMode, learnedTerms, la
     ? `이전에 ${lastSensor} 센서를 사용했습니다.`
     : '';
 
-  // 전체 센서 목록 요약 (AI가 모든 센서를 알도록)
-  const allSensors = SENSOR_ORDER.map(id => {
-    const s = SENSORS[id];
-    return `${s.name}(${s.model}, ${s.protocol}${s.address ? ' ' + s.address : ''})`;
-  }).join(', ');
+  // 카테고리별 센서 수 요약 (전체 센서 상세 목록 대신)
+  const categorySummary = getCategorySummary();
+
+  // 선택된 센서와 같은 카테고리 센서 이름
+  const sameCategoryInfo = selectedSensor ? getSameCategorySensorNames(selectedSensor) : '';
 
   let sensorContext = '';
   if (sensor) {
@@ -37,7 +61,8 @@ export function buildSystemPrompt({ selectedSensor, shieldMode, learnedTerms, la
 연결 모드: ${mode}
 배선 정보:
 ${modeData.pins.map(p => `  - ${p.sensor} → ${p.picoName} (물리 ${p.pico}번 핀) [${p.label}선]`).join('\n')}
-${modeData.warning ? `주의: ${modeData.warning}` : ''}`;
+${modeData.warning ? `주의: ${modeData.warning}` : ''}
+${sameCategoryInfo}`;
     } else {
       sensorContext = `
 현재 선택된 센서: ${sensor.name} (${sensor.model})
@@ -45,7 +70,8 @@ ${modeData.warning ? `주의: ${modeData.warning}` : ''}`;
 연결 모드: ${mode}
 카테고리: ${sensor.category}
 설명: ${sensor.description}
-이 센서는 아직 배선 데이터가 준비되지 않았습니다. AI가 직접 배선과 코드를 안내해야 합니다.`;
+이 센서는 아직 배선 데이터가 준비되지 않았습니다. AI가 직접 배선과 코드를 안내해야 합니다.
+${sameCategoryInfo}`;
     }
   }
 
@@ -59,8 +85,7 @@ ${modeData.warning ? `주의: ${modeData.warning}` : ''}`;
 - 답변은 짧고 명확하게. 한 번에 너무 많은 정보를 주지 마세요
 - 배선 안내 시 반드시 핀 번호, 선 색상, 주의사항을 포함하세요
 
-지원 센서/액추에이터 (총 ${SENSOR_ORDER.length}종):
-${allSensors}
+지원 센서/액추에이터: 총 ${SENSOR_ORDER.length}종 (${categorySummary})
 
 보드: Raspberry Pi Pico 2 WH (RP2350, 40핀)
 기본 I2C: I2C(1, sda=Pin(6), scl=Pin(7)) — GP6=SDA, GP7=SCL (I2C 버스 1)

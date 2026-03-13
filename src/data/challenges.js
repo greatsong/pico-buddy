@@ -108,6 +108,78 @@ const CHALLENGES = {
       solution: "altitude = (1013.25 - pressure) * 8.3 으로 대략적인 고도 계산 가능!",
     },
   ],
+  LIGHT: [
+    {
+      id: "LIGHT_predict",
+      type: "predict",
+      emoji: "🤔",
+      question: "지금 교실의 밝기가 얼마나 될까요? 센서 값이 0~65535 사이라면 어디쯤일지 예측해보세요!",
+      followUp: "코드를 실행해서 확인해볼까요? 형광등 아래에서는 보통 30000~50000 정도 나와요!",
+    },
+    {
+      id: "LIGHT_hand",
+      type: "experiment",
+      emoji: "🖐️",
+      question: "손으로 센서를 가려보면 값이 어떻게 변할까요? 완전히 가리면 0이 될까요?",
+      followUp: "손으로 가리면 값이 확 줄어들어요! 하지만 완전히 0이 되진 않아요. 빛이 약간은 새어 들어오거든요!",
+    },
+    {
+      id: "LIGHT_auto_lamp",
+      type: "mission",
+      emoji: "💡",
+      question: "어두워지면 자동으로 LED가 켜지는 '자동 조명' 시스템을 만들어보세요!",
+      hint: "if light_value < 10000: led.on() else: led.off()",
+      solution: "빛 센서 값이 기준값 이하이면 LED를 켜고, 밝으면 LED를 끄는 조건문을 사용해요!",
+    },
+  ],
+  SOUND: [
+    {
+      id: "SOUND_predict",
+      type: "predict",
+      emoji: "👏",
+      question: "박수를 한 번 치면 소리 센서 값이 얼마나 올라갈까요? 조용할 때와 비교해서 예측해보세요!",
+      followUp: "조용할 때는 5000~10000 정도인데, 박수를 치면 순간적으로 40000 이상 올라가요!",
+    },
+    {
+      id: "SOUND_experiment",
+      type: "experiment",
+      emoji: "🔊",
+      question: "큰 소리와 작은 소리를 번갈아 내보세요. 센서 값의 차이가 얼마나 나나요?",
+      followUp: "속삭이면 10000 이하, 보통 말하면 20000 정도, 크게 소리치면 50000 이상! 소리 크기에 따라 값이 달라져요.",
+    },
+    {
+      id: "SOUND_noise_alert",
+      type: "mission",
+      emoji: "🚨",
+      question: "소음이 기준값을 넘으면 '조용히 해주세요!'를 출력하는 소음 알림기를 만들어보세요!",
+      hint: "if sound_value > 35000: print('조용히 해주세요!')",
+      solution: "소리 센서 값이 기준값을 넘으면 경고 메시지를 출력하고, LED를 깜빡이게 하면 더 좋아요!",
+    },
+  ],
+  ULTRASONIC: [
+    {
+      id: "ULTRASONIC_predict",
+      type: "predict",
+      emoji: "📐",
+      question: "책상 높이가 몇 cm일까요? 센서를 책상 위에 올려놓고 바닥까지 거리를 측정해보세요!",
+      followUp: "일반 책상 높이는 약 70~75cm예요. 센서 측정값과 비교해보세요!",
+    },
+    {
+      id: "ULTRASONIC_hand",
+      type: "experiment",
+      emoji: "🖐️",
+      question: "센서 앞에서 손을 가까이/멀리 움직여보세요. 가장 가까이 측정되는 거리는 몇 cm인가요?",
+      followUp: "초음파 센서는 약 2cm 미만은 측정하기 어려워요. 2~400cm 범위에서 잘 작동해요!",
+    },
+    {
+      id: "ULTRASONIC_parking",
+      type: "mission",
+      emoji: "🚗",
+      question: "물체가 가까워지면 경고하는 '주차 센서'를 만들어보세요! 30cm 미만이면 '위험!', 60cm 미만이면 '주의'를 출력하세요.",
+      hint: "if dist < 30: print('위험!') elif dist < 60: print('주의') else: print('안전')",
+      solution: "거리에 따라 3단계로 구분하고, LED나 부저를 추가하면 진짜 주차 센서처럼 돼요!",
+    },
+  ],
 };
 
 export default CHALLENGES;

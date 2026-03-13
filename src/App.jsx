@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import useAppStore from './stores/appStore';
 import SENSORS from './data/sensors';
 import SensorCatalog from './components/SensorCatalog';
@@ -8,34 +9,65 @@ import AnnotatedCode from './components/code/AnnotatedCode';
 import TipsPanel from './components/common/TipsPanel';
 
 export default function App() {
-  const { selectedSensor, setSelectedSensor, shieldMode, setShieldMode, activeTab, setActiveTab } = useAppStore();
+  const selectedSensor = useAppStore(s => s.selectedSensor);
+  const setSelectedSensor = useAppStore(s => s.setSelectedSensor);
+  const shieldMode = useAppStore(s => s.shieldMode);
+  const setShieldMode = useAppStore(s => s.setShieldMode);
+  const activeTab = useAppStore(s => s.activeTab);
+  const setActiveTab = useAppStore(s => s.setActiveTab);
   const sensor = selectedSensor ? SENSORS[selectedSensor] : null;
-  const hasData = sensor?.shield; // 배선/코드 데이터가 있는 센서인지
+  const hasData = sensor?.shield;
+
+  // 모바일 패널 전환 (채팅 ↔ 보드)
+  const [mobileView, setMobileView] = useState('chat');
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   return (
     <div className="app-root">
+      {/* 모바일 패널 전환 버튼 */}
+      {isMobile && (
+        <div className="mobile-panel-switch">
+          <button
+            className={`mobile-switch-btn ${mobileView === 'chat' ? 'active' : ''}`}
+            onClick={() => setMobileView('chat')}
+          >
+            💬 AI 튜터
+          </button>
+          <button
+            className={`mobile-switch-btn ${mobileView === 'board' ? 'active' : ''}`}
+            onClick={() => setMobileView('board')}
+          >
+            🔌 배선·코드
+          </button>
+        </div>
+      )}
+
       {/* 왼쪽: 센서 선택 + AI 채팅 */}
-      <div className="left-panel">
-        {/* 센서 카탈로그 */}
+      <div className={`left-panel ${isMobile && mobileView !== 'chat' ? 'mobile-hidden' : ''}`}>
         <SensorCatalog
           selectedSensor={selectedSensor}
           onSelect={(id) => setSelectedSensor(selectedSensor === id ? null : id)}
         />
-        {/* AI 채팅 */}
         <div className="chat-container">
           <ChatPanel />
         </div>
       </div>
 
       {/* 오른쪽: 시각 보드 */}
-      <div className="right-panel">
-        {/* 탭 바 */}
+      <div className={`right-panel ${isMobile && mobileView !== 'board' ? 'mobile-hidden' : ''}`}>
         <div className="tab-bar">
           {[
-            ['wiring', '🔌 배선 가이드'],
+            ['wiring', '🔌 배선'],
             ['pinmap', '📍 핀맵'],
             ['code', '💻 코드'],
-            ['tips', '⚠️ 주의사항'],
+            ['tips', '⚠️ 팁'],
           ].map(([t, label]) => (
             <button key={t} onClick={() => setActiveTab(t)}
               className={`tab-btn ${activeTab === t ? 'active' : ''}`}>
@@ -55,7 +87,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* 탭 내용 */}
         <div className="tab-content">
           {activeTab === 'wiring' && (
             hasData ? <WiringGuide /> : <NoDataGuide sensor={sensor} tab="wiring" />

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import SENSORS, { CATEGORIES, PROTOCOLS, SENSOR_ORDER } from '../data/sensors';
+import SensorImage, { hasSensorImage } from './common/SensorImage';
 
 // 32종 센서/액추에이터 카탈로그 — 카테고리 필터 + 검색
 export default function SensorCatalog({ selectedSensor, onSelect }) {
@@ -71,7 +72,11 @@ export default function SensorCatalog({ selectedSensor, onSelect }) {
       >
         {current ? (
           <div className="catalog-header-inner">
-            <span className="catalog-icon">{current.icon}</span>
+            {hasSensorImage(selectedSensor) ? (
+              <SensorImage sensorId={selectedSensor} size={28} />
+            ) : (
+              <span className="catalog-icon">{current.icon}</span>
+            )}
             <div className="catalog-info">
               <span className="catalog-name">{current.name}</span>
               <span className="catalog-model">{current.model}</span>
@@ -156,17 +161,44 @@ export default function SensorCatalog({ selectedSensor, onSelect }) {
                         style={{
                           borderColor: isSelected ? s.color : '#1a1a2e',
                           background: isSelected ? s.color + '15' : '#0a0a14',
+                          position: 'relative',
                         }}
                         onClick={() => handleSelect(id)}
                       >
-                        <div className="card-top">
-                          <span className="card-icon">{s.icon}</span>
-                          <span
-                            className="card-protocol"
-                            style={{ color: PROTOCOLS[s.protocol]?.color || '#888' }}
-                          >
-                            {PROTOCOLS[s.protocol]?.label || s.protocol}
+                        {s.recommended && (
+                          <span style={{
+                            position: 'absolute', top: 4, right: 4,
+                            fontSize: 8, padding: '1px 5px', borderRadius: 4,
+                            background: '#00ff8822', color: '#00ff88',
+                            border: '1px solid #00ff8844',
+                            fontWeight: 'bold', lineHeight: 1.4,
+                          }}>
+                            초보자 추천
                           </span>
+                        )}
+                        <div className="card-top">
+                          {hasSensorImage(id) ? (
+                            <SensorImage sensorId={id} size={36} />
+                          ) : (
+                            <span className="card-icon">{s.icon}</span>
+                          )}
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                            <span
+                              className="card-protocol"
+                              style={{ color: PROTOCOLS[s.protocol]?.color || '#888' }}
+                            >
+                              {PROTOCOLS[s.protocol]?.label || s.protocol}
+                            </span>
+                            <span style={{
+                              fontSize: 7, padding: '1px 4px', borderRadius: 3,
+                              background: s.grove !== false ? '#00aa5522' : '#88888822',
+                              color: s.grove !== false ? '#00cc66' : '#888',
+                              border: `1px solid ${s.grove !== false ? '#00aa5544' : '#88888844'}`,
+                              fontWeight: 'bold', lineHeight: 1.3,
+                            }}>
+                              {s.grove !== false ? '🟢 Grove' : '🔧 일반'}
+                            </span>
+                          </div>
                         </div>
                         <div className="card-name" style={{ color: isSelected ? s.color : '#ddd' }}>
                           {s.name}

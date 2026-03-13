@@ -20,9 +20,19 @@ import ImageUpload from './ImageUpload';
 
 // AI 튜터 채팅 패널 — 맥락 인식 + 용어 설명 + 에러 진단
 export default function ChatPanel() {
-  const { selectedSensor, shieldMode } = useAppStore();
-  const { messages, isLoading, addMessage, updateLastMessage, setLoading } = useChatStore();
-  const { learnedTerms, lastSensor, completedSensors, completedChallenges, learnTerm, updateContext } = useProgressStore();
+  const selectedSensor = useAppStore(s => s.selectedSensor);
+  const shieldMode = useAppStore(s => s.shieldMode);
+  const messages = useChatStore(s => s.messages);
+  const isLoading = useChatStore(s => s.isLoading);
+  const addMessage = useChatStore(s => s.addMessage);
+  const updateLastMessage = useChatStore(s => s.updateLastMessage);
+  const setLoading = useChatStore(s => s.setLoading);
+  const learnedTerms = useProgressStore(s => s.learnedTerms);
+  const lastSensor = useProgressStore(s => s.lastSensor);
+  const completedSensors = useProgressStore(s => s.completedSensors);
+  const completedChallenges = useProgressStore(s => s.completedChallenges);
+  const learnTerm = useProgressStore(s => s.learnTerm);
+  const updateContext = useProgressStore(s => s.updateContext);
   const [input, setInput] = useState('');
   const [showMistakes, setShowMistakes] = useState(null);
   const [activeChallenge, setActiveChallenge] = useState(null);
@@ -38,6 +48,7 @@ export default function ChatPanel() {
   useEffect(() => {
     if (selectedSensor && selectedSensor !== prevSensorRef.current) {
       prevSensorRef.current = selectedSensor;
+      setActiveChallenge(null);
       const sensor = SENSORS[selectedSensor];
       if (!sensor) return;
       const mode = shieldMode ? 'Grove Shield' : '직접연결';
@@ -166,10 +177,11 @@ export default function ChatPanel() {
           <div style={{ fontSize: 15, fontWeight: 'bold', color: '#00ff88' }}>
             🤖 Pico Buddy
           </div>
-          <div style={{ fontSize: 9, color: '#555' }}>Raspberry Pi Pico 2 WH</div>
+          <div style={{ fontSize: 9, color: '#888' }}>Raspberry Pi Pico 2 WH</div>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <button onClick={saveChatLog}
+            aria-label="학습 기록 저장"
             style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #333', background: 'transparent', color: '#888', fontSize: 10, cursor: 'pointer' }}
             title="학습 기록 저장">
             📝 기록 저장
@@ -228,7 +240,7 @@ export default function ChatPanel() {
         {isLoading && (
           <div style={{
             alignSelf: 'flex-start', padding: '10px 14px',
-            background: '#0d1a0d', borderRadius: 14, fontSize: 12, color: '#555',
+            background: '#0d1a0d', borderRadius: 14, fontSize: 12, color: '#888',
           }}>
             ⏳ 생각하는 중...
           </div>
@@ -236,6 +248,41 @@ export default function ChatPanel() {
 
         <div ref={chatEndRef} />
       </div>
+
+      {/* 미니 챌린지 */}
+      {selectedSensor && CHALLENGES[selectedSensor] && CHALLENGES[selectedSensor].length > 0 && !activeChallenge && (
+        <div style={{ padding: '6px 12px', borderTop: '1px solid #1a1a2e' }}>
+          <button
+            onClick={() => setActiveChallenge(CHALLENGES[selectedSensor][0])}
+            style={{
+              width: '100%', padding: '8px 12px', borderRadius: 8,
+              background: '#0d0d2a', border: '1px solid #00ff8833',
+              color: '#00ff88', fontSize: 11, cursor: 'pointer',
+              textAlign: 'center',
+            }}
+          >
+            🎯 미니 챌린지에 도전해보세요!
+          </button>
+        </div>
+      )}
+      {activeChallenge && (
+        <div style={{ padding: '6px 12px', borderTop: '1px solid #1a1a2e' }}>
+          <MiniChallenge
+            challenge={activeChallenge}
+            sensorColor={SENSORS[selectedSensor]?.color || '#00ff88'}
+            onComplete={() => {
+              const challenges = CHALLENGES[selectedSensor] || [];
+              const currentIdx = challenges.findIndex(c => c.id === activeChallenge.id);
+              const nextChallenge = challenges[currentIdx + 1];
+              if (nextChallenge) {
+                setTimeout(() => setActiveChallenge(nextChallenge), 1500);
+              } else {
+                setTimeout(() => setActiveChallenge(null), 1500);
+              }
+            }}
+          />
+        </div>
+      )}
 
       {/* 추천 질문 */}
       <SuggestedActions
@@ -284,6 +331,7 @@ export default function ChatPanel() {
           }}
         />
         <button onClick={sendMessage} disabled={isLoading}
+          aria-label="메시지 전송"
           style={{
             background: '#00ff88', border: 'none', borderRadius: 8,
             padding: '0 14px', cursor: isLoading ? 'not-allowed' : 'pointer',

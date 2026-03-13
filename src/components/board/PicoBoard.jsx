@@ -6,7 +6,9 @@ import GLOSSARY from '../../data/glossary';
 
 // SVG Pico 2 WH 보드 — 실제 보드처럼 생긴 시각적 핀맵
 export default function PicoBoard() {
-  const { selectedSensor, shieldMode, highlightPins } = useAppStore();
+  const selectedSensor = useAppStore(s => s.selectedSensor);
+  const shieldMode = useAppStore(s => s.shieldMode);
+  const highlightPins = useAppStore(s => s.highlightPins);
 
   const sensorBase = selectedSensor ? SENSORS[selectedSensor] : null;
   const modeData = sensorBase ? (shieldMode ? sensorBase.shield : sensorBase.direct) : null;
