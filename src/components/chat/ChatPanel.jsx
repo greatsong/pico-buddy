@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import useAppStore from '../../stores/appStore';
 import useChatStore from '../../stores/chatStore';
 import useProgressStore from '../../stores/progressStore';
@@ -204,6 +205,7 @@ export default function ChatPanel() {
             }}>
               <GlossaryTooltip>
                 <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
                   components={{
                     code: ({ children, className }) => {
                       const isBlock = className?.includes('language-');
@@ -218,8 +220,24 @@ export default function ChatPanel() {
                     },
                     p: ({ children }) => <div style={{ marginBottom: 6 }}>{children}</div>,
                     ul: ({ children }) => <ul style={{ paddingLeft: 16, margin: '4px 0' }}>{children}</ul>,
+                    ol: ({ children }) => <ol style={{ paddingLeft: 16, margin: '4px 0' }}>{children}</ol>,
                     li: ({ children }) => <li style={{ marginBottom: 2 }}>{children}</li>,
                     strong: ({ children }) => <strong style={{ color: '#00ff88' }}>{children}</strong>,
+                    table: ({ children }) => (
+                      <div style={{ overflowX: 'auto', margin: '8px 0' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>{children}</table>
+                      </div>
+                    ),
+                    thead: ({ children }) => <thead style={{ background: '#1a2a1a' }}>{children}</thead>,
+                    th: ({ children }) => <th style={{ padding: '6px 8px', borderBottom: '2px solid #00ff8844', color: '#00ff88', textAlign: 'left', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{children}</th>,
+                    td: ({ children }) => <td style={{ padding: '5px 8px', borderBottom: '1px solid #1a2a1a', color: '#ccc' }}>{children}</td>,
+                    tr: ({ children }) => <tr style={{ borderBottom: '1px solid #1a2a1a' }}>{children}</tr>,
+                    h1: ({ children }) => <div style={{ fontSize: 16, fontWeight: 'bold', color: '#00ff88', margin: '10px 0 6px' }}>{children}</div>,
+                    h2: ({ children }) => <div style={{ fontSize: 14, fontWeight: 'bold', color: '#00ff88', margin: '8px 0 4px' }}>{children}</div>,
+                    h3: ({ children }) => <div style={{ fontSize: 13, fontWeight: 'bold', color: '#00ffaa', margin: '6px 0 3px' }}>{children}</div>,
+                    hr: () => <hr style={{ border: 'none', borderTop: '1px solid #1a2a1a', margin: '8px 0' }} />,
+                    blockquote: ({ children }) => <blockquote style={{ borderLeft: '3px solid #00ff8855', paddingLeft: 10, margin: '6px 0', color: '#aaa' }}>{children}</blockquote>,
+                    a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: '#4da6ff', textDecoration: 'underline' }}>{children}</a>,
                   }}
                 >{msg.text}</ReactMarkdown>
               </GlossaryTooltip>
