@@ -15,7 +15,6 @@ import GLOSSARY, { GLOSSARY_PATTERNS } from '../../data/glossary';
 import GlossaryTooltip from './GlossaryTooltip';
 import MistakeWarning from './MistakeWarning';
 import MiniChallenge from './MiniChallenge';
-import ErrorDiagnosis from './ErrorDiagnosis';
 import SuggestedActions from './SuggestedActions';
 import ImageUpload from './ImageUpload';
 

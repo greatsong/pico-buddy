@@ -205,6 +205,11 @@ export default function SensorCatalog({ selectedSensor, onSelect }) {
                         </div>
                         <div className="card-model">{s.model}</div>
                         <div className="card-desc">{s.description}</div>
+                        {s.addressWarning && (
+                          <div className="card-addr-warn" style={{ color: '#ffaa00', fontSize: '0.7rem', marginTop: 2 }}>
+                            ⚠️ {s.addressWarning}
+                          </div>
+                        )}
                         <div className="card-bottom">
                           <span className="card-diff">
                             {'●'.repeat(s.difficulty)}{'○'.repeat(3 - s.difficulty)}

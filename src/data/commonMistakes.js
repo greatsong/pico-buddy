@@ -87,7 +87,7 @@ const COMMON_MISTAKES = {
       level: "warn",
       title: "ADC 핀은 GP26, GP27, GP28만 사용 가능!",
       desc: "빛 센서는 아날로그(ADC) 센서라서 일반 디지털 핀에 꽂으면 값을 읽을 수 없어요.",
-      fix: "반드시 GP26(A0), GP27(A2), GP28 중 하나에 연결하세요.",
+      fix: "반드시 GP26(A0), GP27(A1), GP28(A2) 중 하나에 연결하세요.",
     },
     {
       level: "info",

@@ -75,11 +75,11 @@ export default function PicoBoard() {
         <text x={pcbX + 100} y={300} textAnchor="middle" fontSize={7} fill="#224422">Pico 2 WH</text>
 
         {/* BOOTSEL 버튼 */}
-        <circle cx={pcbX + 100} y={230} r={8} fill="#222" stroke="#444" strokeWidth={1} />
+        <circle cx={pcbX + 100} cy={230} r={8} fill="#222" stroke="#444" strokeWidth={1} />
         <text x={pcbX + 100} y={248} textAnchor="middle" fontSize={6} fill="#555">BOOTSEL</text>
 
         {/* LED */}
-        <circle cx={pcbX + 40} y={80} r={3} fill="#00ff00" opacity={0.6} />
+        <circle cx={pcbX + 40} cy={80} r={3} fill="#00ff00" opacity={0.6} />
 
         {/* 왼쪽 핀 (1~20) */}
         {PICO_LEFT.map((pin, i) => {

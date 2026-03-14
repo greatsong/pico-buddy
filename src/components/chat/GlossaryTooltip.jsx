@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import GLOSSARY from '../../data/glossary';
+import { useState, useCallback } from 'react';
+import GLOSSARY, { GLOSSARY_PATTERNS } from '../../data/glossary';
 import useProgressStore from '../../stores/progressStore';
 
 // 용어 자동 설명 — children 텍스트에서 용어를 찾아 툴팁 표시
@@ -7,10 +7,29 @@ export default function GlossaryTooltip({ children }) {
   const [hoveredTerm, setHoveredTerm] = useState(null);
   const { isTermLearned } = useProgressStore();
 
-  // children을 그대로 렌더링 (용어 하이라이트는 CSS로 처리)
+  // 마우스가 올라간 요소의 텍스트에서 용어를 찾는 이벤트 위임
+  const handleMouseMove = useCallback((e) => {
+    const target = e.target;
+    const text = target.textContent || '';
+    if (!text) {
+      setHoveredTerm(null);
+      return;
+    }
+
+    // GLOSSARY_PATTERNS는 긴 용어부터 정렬되어 있음
+    for (const term of GLOSSARY_PATTERNS) {
+      if (text.includes(term)) {
+        setHoveredTerm(term);
+        return;
+      }
+    }
+    setHoveredTerm(null);
+  }, []);
+
   return (
     <div
       style={{ position: 'relative' }}
+      onMouseMove={handleMouseMove}
       onMouseLeave={() => setHoveredTerm(null)}
     >
       {children}

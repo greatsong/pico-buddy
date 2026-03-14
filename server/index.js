@@ -23,7 +23,7 @@ app.use(cors({
     }
   },
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Claude API 스트리밍 프록시 (공통 모듈 사용)
 app.post('/api/chat', async (req, res) => {
@@ -40,6 +40,21 @@ app.post('/api/chat', async (req, res) => {
 // URL 내용 가져오기 (센서/액추에이터 링크 분석)
 app.post('/api/fetch-url', async (req, res) => {
   const { url } = req.body;
+
+  // URL 유효성 검사 (SSRF 방지)
+  try {
+    const parsedUrl = new URL(url);
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      return res.status(400).json({ error: 'Only HTTP/HTTPS URLs are allowed' });
+    }
+    // 내부/사설 IP 차단
+    const hostname = parsedUrl.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.startsWith('172.') || hostname === '0.0.0.0' || hostname.includes('169.254.')) {
+      return res.status(400).json({ error: 'Private/internal URLs are not allowed' });
+    }
+  } catch {
+    return res.status(400).json({ error: 'Invalid URL' });
+  }
 
   try {
     const response = await fetch(url, {
@@ -88,7 +103,7 @@ app.post('/api/fetch-url', async (req, res) => {
 });
 
 // 이미지 분석 (배선 사진 → AI 피드백)
-app.post('/api/analyze-image', express.json({ limit: '10mb' }), async (req, res) => {
+app.post('/api/analyze-image', async (req, res) => {
   const { image, mediaType, sensorContext } = req.body;
 
   try {

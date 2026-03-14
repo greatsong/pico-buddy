@@ -26,7 +26,7 @@ const ERROR_PATTERNS = [
     tab: "code",
   },
   {
-    pattern: /\[\s*\]/,
+    pattern: /(?:scan|i2c).*\[\s*\]|\[\s*\]\s*$/im,
     cause: "센서 미인식 (빈 스캔 결과)",
     emoji: "🔍",
     explain: "i2c.scan()을 했는데 아무것도 안 나왔어요. 센서가 Pico에 연결되지 않았다는 뜻이에요!",

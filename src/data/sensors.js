@@ -272,19 +272,36 @@ else:
       warning: null,
       note: "Grove Shield I2C1 포트 사용. 고도 계산 가능.",
       code: `from machine import I2C, Pin
-import time, struct
+import time
 
 # I2C 통신 설정
 i2c = I2C(1, sda=Pin(6), scl=Pin(7), freq=100000)
 addr = 0x76  # BMP280 주소
 
-# 보정 데이터 읽기
+# 보정 데이터 읽기 (온도 + 기압)
 cal = i2c.readfrom_mem(addr, 0x88, 26)
 dig_T1 = cal[0] | (cal[1] << 8)
 dig_T2 = (cal[2] | (cal[3] << 8))
 if dig_T2 > 32767: dig_T2 -= 65536
 dig_T3 = (cal[4] | (cal[5] << 8))
 if dig_T3 > 32767: dig_T3 -= 65536
+dig_P1 = cal[6] | (cal[7] << 8)
+dig_P2 = (cal[8] | (cal[9] << 8))
+if dig_P2 > 32767: dig_P2 -= 65536
+dig_P3 = (cal[10] | (cal[11] << 8))
+if dig_P3 > 32767: dig_P3 -= 65536
+dig_P4 = (cal[12] | (cal[13] << 8))
+if dig_P4 > 32767: dig_P4 -= 65536
+dig_P5 = (cal[14] | (cal[15] << 8))
+if dig_P5 > 32767: dig_P5 -= 65536
+dig_P6 = (cal[16] | (cal[17] << 8))
+if dig_P6 > 32767: dig_P6 -= 65536
+dig_P7 = (cal[18] | (cal[19] << 8))
+if dig_P7 > 32767: dig_P7 -= 65536
+dig_P8 = (cal[20] | (cal[21] << 8))
+if dig_P8 > 32767: dig_P8 -= 65536
+dig_P9 = (cal[22] | (cal[23] << 8))
+if dig_P9 > 32767: dig_P9 -= 65536
 
 # 측정 모드 설정 (온도+기압, 보통 모드)
 i2c.writeto_mem(addr, 0xF4, bytes([0x27]))
@@ -296,21 +313,42 @@ def read_bmp280():
     # 온도 보정
     v1 = (raw_t / 16384.0 - dig_T1 / 1024.0) * dig_T2
     v2 = ((raw_t / 131072.0 - dig_T1 / 8192.0) ** 2) * dig_T3
-    temp = (v1 + v2) / 5120.0
-    return round(temp, 1)
+    t_fine = v1 + v2
+    temp = t_fine / 5120.0
+    # 기압 보정
+    p1 = t_fine / 2.0 - 64000.0
+    p2 = p1 * p1 * dig_P6 / 32768.0
+    p2 = p2 + p1 * dig_P5 * 2.0
+    p2 = p2 / 4.0 + dig_P4 * 65536.0
+    p1 = (dig_P3 * p1 * p1 / 524288.0 + dig_P2 * p1) / 524288.0
+    p1 = (1.0 + p1 / 32768.0) * dig_P1
+    if p1 == 0:
+        return round(temp, 1), 0, 0
+    pressure = 1048576.0 - raw_p
+    pressure = (pressure - p2 / 4096.0) * 6250.0 / p1
+    p1 = dig_P9 * pressure * pressure / 2147483648.0
+    p2 = pressure * dig_P8 / 32768.0
+    pressure = pressure + (p1 + p2 + dig_P7) / 16.0
+    hpa = pressure / 100.0
+    # 고도 계산 (표준 기압 1013.25 hPa 기준)
+    alt = 44330.0 * (1.0 - (hpa / 1013.25) ** 0.1903)
+    return round(temp, 1), round(hpa, 1), round(alt, 1)
 
 while True:
-    temp = read_bmp280()
-    print(f"온도: {temp}°C")
+    temp, hpa, alt = read_bmp280()
+    print(f"온도: {temp}°C, 기압: {hpa} hPa, 고도: {alt} m")
     time.sleep(1)`,
       annotations: [
         { line: 1, text: "I2C 통신과 핀 기능을 가져옵니다" },
         { line: 5, text: "I2C 1번 버스, 100kHz 속도" },
         { line: 6, text: "0x76은 BMP280의 기본 주소예요 (0x77일 수도 있음)" },
-        { line: 8, text: "센서 내부 보정 데이터를 읽어옵니다 (정확한 측정에 필요)" },
-        { line: 16, text: "온도+기압 측정 모드로 설정합니다" },
-        { line: 19, text: "기압과 온도 원시 데이터를 읽습니다" },
-        { line: 23, text: "보정 데이터로 정확한 온도를 계산합니다" },
+        { line: 8, text: "센서 내부 보정 데이터를 읽어옵니다 (온도 + 기압 보정에 필요)" },
+        { line: 34, text: "온도+기압 측정 모드로 설정합니다" },
+        { line: 37, text: "기압과 온도 원시 데이터를 읽습니다" },
+        { line: 42, text: "보정 데이터로 정확한 온도를 계산합니다" },
+        { line: 46, text: "보정 데이터로 정확한 기압(hPa)을 계산합니다" },
+        { line: 59, text: "기압으로부터 대략적인 고도를 계산합니다" },
+        { line: 63, text: "온도, 기압, 고도를 모두 출력합니다" },
       ],
     },
     direct: {
@@ -323,7 +361,7 @@ while True:
       warning: "4.7kΩ 풀업 저항 2개 필수!",
       note: "점퍼선 직접 연결.",
       code: `from machine import I2C, Pin
-import time, struct
+import time
 
 sda = Pin(6, pull=Pin.PULL_UP)
 scl = Pin(7, pull=Pin.PULL_UP)
@@ -336,19 +374,54 @@ dig_T2 = (cal[2] | (cal[3] << 8))
 if dig_T2 > 32767: dig_T2 -= 65536
 dig_T3 = (cal[4] | (cal[5] << 8))
 if dig_T3 > 32767: dig_T3 -= 65536
+dig_P1 = cal[6] | (cal[7] << 8)
+dig_P2 = (cal[8] | (cal[9] << 8))
+if dig_P2 > 32767: dig_P2 -= 65536
+dig_P3 = (cal[10] | (cal[11] << 8))
+if dig_P3 > 32767: dig_P3 -= 65536
+dig_P4 = (cal[12] | (cal[13] << 8))
+if dig_P4 > 32767: dig_P4 -= 65536
+dig_P5 = (cal[14] | (cal[15] << 8))
+if dig_P5 > 32767: dig_P5 -= 65536
+dig_P6 = (cal[16] | (cal[17] << 8))
+if dig_P6 > 32767: dig_P6 -= 65536
+dig_P7 = (cal[18] | (cal[19] << 8))
+if dig_P7 > 32767: dig_P7 -= 65536
+dig_P8 = (cal[20] | (cal[21] << 8))
+if dig_P8 > 32767: dig_P8 -= 65536
+dig_P9 = (cal[22] | (cal[23] << 8))
+if dig_P9 > 32767: dig_P9 -= 65536
 i2c.writeto_mem(addr, 0xF4, bytes([0x27]))
 
 def read_bmp280():
     data = i2c.readfrom_mem(addr, 0xF7, 6)
+    raw_p = (data[0] << 12) | (data[1] << 4) | (data[2] >> 4)
     raw_t = (data[3] << 12) | (data[4] << 4) | (data[5] >> 4)
     v1 = (raw_t / 16384.0 - dig_T1 / 1024.0) * dig_T2
     v2 = ((raw_t / 131072.0 - dig_T1 / 8192.0) ** 2) * dig_T3
-    temp = (v1 + v2) / 5120.0
-    return round(temp, 1)
+    t_fine = v1 + v2
+    temp = t_fine / 5120.0
+    # 기압 보정
+    p1 = t_fine / 2.0 - 64000.0
+    p2 = p1 * p1 * dig_P6 / 32768.0
+    p2 = p2 + p1 * dig_P5 * 2.0
+    p2 = p2 / 4.0 + dig_P4 * 65536.0
+    p1 = (dig_P3 * p1 * p1 / 524288.0 + dig_P2 * p1) / 524288.0
+    p1 = (1.0 + p1 / 32768.0) * dig_P1
+    if p1 == 0:
+        return round(temp, 1), 0, 0
+    pressure = 1048576.0 - raw_p
+    pressure = (pressure - p2 / 4096.0) * 6250.0 / p1
+    p1 = dig_P9 * pressure * pressure / 2147483648.0
+    p2 = pressure * dig_P8 / 32768.0
+    pressure = pressure + (p1 + p2 + dig_P7) / 16.0
+    hpa = pressure / 100.0
+    alt = 44330.0 * (1.0 - (hpa / 1013.25) ** 0.1903)
+    return round(temp, 1), round(hpa, 1), round(alt, 1)
 
 while True:
-    temp = read_bmp280()
-    print(f"온도: {temp}°C")
+    temp, hpa, alt = read_bmp280()
+    print(f"온도: {temp}°C, 기압: {hpa} hPa, 고도: {alt} m")
     time.sleep(1)`,
       annotations: [
         { line: 4, text: "직접 연결 — 풀업 저항 활성화" },
@@ -1264,6 +1337,7 @@ else:
     category: "빛/색상", protocol: "I2C", address: "0x29",
     difficulty: 2, lessons: [],
     description: "정밀 조도(럭스)를 측정하는 디지털 광센서",
+    addressWarning: "이 센서는 I2C 주소 0x29를 사용합니다. TSL2591, TCS34725, VL53L0X는 같은 주소를 사용하므로 동시에 연결할 수 없습니다.",
     grove: true,
     shield: {
       grovePort: { name: "I2C1", type: "I2C", position: "left-bottom", color: "#00ff88" },
@@ -1417,6 +1491,7 @@ else:
     category: "빛/색상", protocol: "I2C", address: "0x29",
     difficulty: 2, lessons: [],
     description: "RGB 색상을 인식하는 컬러 센서",
+    addressWarning: "이 센서는 I2C 주소 0x29를 사용합니다. TSL2591, TCS34725, VL53L0X는 같은 주소를 사용하므로 동시에 연결할 수 없습니다.",
     grove: true,
     shield: {
       grovePort: { name: "I2C1", type: "I2C", position: "left-bottom", color: "#00ff88" },
@@ -1708,16 +1783,18 @@ def measure_distance():
     trig.low()
 
     # 에코 신호 대기 (타임아웃 30ms)
-    timeout = time.ticks_us()
+    start = time.ticks_us()
+    end = time.ticks_us()
+    t0 = time.ticks_us()
     while echo.value() == 0:
-        if time.ticks_diff(time.ticks_us(), timeout) > 30000:
-            return -1  # 타임아웃
         start = time.ticks_us()
-
-    while echo.value() == 1:
-        if time.ticks_diff(time.ticks_us(), timeout) > 30000:
+        if time.ticks_diff(start, t0) > 30000:
             return -1  # 타임아웃
+    end = start
+    while echo.value() == 1:
         end = time.ticks_us()
+        if time.ticks_diff(end, start) > 30000:
+            return -1  # 타임아웃
 
     # 거리 계산: 시간(us) × 음속(340m/s) ÷ 2 (왕복)
     duration = time.ticks_diff(end, start)
@@ -1740,14 +1817,15 @@ while True:
         { line: 8, text: "거리를 측정하는 함수를 만듭니다" },
         { line: 10, text: "TRIG 핀을 LOW로 초기화합니다" },
         { line: 12, text: "10마이크로초 동안 HIGH 신호를 보냅니다 (초음파 발사!)" },
-        { line: 16, text: "에코 신호가 돌아올 때까지 기다립니다 (최대 30ms)" },
-        { line: 22, text: "에코 신호가 끝날 때까지의 시간을 측정합니다" },
-        { line: 27, text: "음속(340m/s)으로 거리를 계산합니다. ÷2는 왕복이니까!" },
-        { line: 28, text: "마이크로초 × 0.0343 ÷ 2 = cm 단위 거리" },
-        { line: 32, text: "거리를 측정해서 dist에 저장합니다" },
-        { line: 33, text: "측정 성공하면 거리를 출력합니다" },
-        { line: 35, text: "측정 실패하면 (물체가 너무 멀면) 오류 메시지 출력" },
-        { line: 36, text: "0.5초마다 거리를 측정합니다" },
+        { line: 16, text: "start, end 변수를 초기화합니다 (안전한 코드!)" },
+        { line: 19, text: "에코 신호가 돌아올 때까지 기다립니다 (최대 30ms)" },
+        { line: 24, text: "에코 신호가 끝날 때까지의 시간을 측정합니다" },
+        { line: 30, text: "음속(340m/s)으로 거리를 계산합니다. ÷2는 왕복이니까!" },
+        { line: 31, text: "마이크로초 × 0.0343 ÷ 2 = cm 단위 거리" },
+        { line: 35, text: "거리를 측정해서 dist에 저장합니다" },
+        { line: 36, text: "측정 성공하면 거리를 출력합니다" },
+        { line: 38, text: "측정 실패하면 (물체가 너무 멀면) 오류 메시지 출력" },
+        { line: 39, text: "0.5초마다 거리를 측정합니다" },
       ],
     },
     direct: {
@@ -1772,16 +1850,18 @@ def measure_distance():
     time.sleep_us(10)
     trig.low()
 
-    timeout = time.ticks_us()
+    start = time.ticks_us()
+    end = time.ticks_us()
+    t0 = time.ticks_us()
     while echo.value() == 0:
-        if time.ticks_diff(time.ticks_us(), timeout) > 30000:
-            return -1
         start = time.ticks_us()
-
-    while echo.value() == 1:
-        if time.ticks_diff(time.ticks_us(), timeout) > 30000:
+        if time.ticks_diff(start, t0) > 30000:
             return -1
+    end = start
+    while echo.value() == 1:
         end = time.ticks_us()
+        if time.ticks_diff(end, start) > 30000:
+            return -1
 
     duration = time.ticks_diff(end, start)
     distance = duration * 0.0343 / 2
@@ -1800,7 +1880,8 @@ while True:
         { line: 5, text: "GP17을 ECHO(입력)로 설정" },
         { line: 7, text: "초음파 거리 측정 함수" },
         { line: 12, text: "10us 펄스로 초음파를 발사합니다" },
-        { line: 25, text: "왕복 시간으로 거리를 계산합니다 (음속 × 시간 ÷ 2)" },
+        { line: 15, text: "start, end 변수를 초기화합니다 (안전한 코드!)" },
+        { line: 27, text: "왕복 시간으로 거리를 계산합니다 (음속 × 시간 ÷ 2)" },
       ],
     },
     initCheck: `# 초음파 거리 센서 테스트
@@ -1813,17 +1894,20 @@ time.sleep_us(2)
 trig.high()
 time.sleep_us(10)
 trig.low()
-timeout = time.ticks_us()
+start = time.ticks_us()
+end = time.ticks_us()
+t0 = time.ticks_us()
 while echo.value() == 0:
-    if time.ticks_diff(time.ticks_us(), timeout) > 30000:
+    start = time.ticks_us()
+    if time.ticks_diff(start, t0) > 30000:
         print("\\u274C 에코 응답 없음. 배선을 확인하세요.")
         break
-    start = time.ticks_us()
 else:
+    end = start
     while echo.value() == 1:
-        if time.ticks_diff(time.ticks_us(), timeout) > 30000:
-            break
         end = time.ticks_us()
+        if time.ticks_diff(end, start) > 30000:
+            break
     dist = time.ticks_diff(end, start) * 0.0343 / 2
     print(f"거리: {dist:.1f} cm")
     print("\\u2705 초음파 센서가 동작해요!")`,
@@ -1835,6 +1919,7 @@ else:
     category: "거리/움직임", protocol: "I2C", address: "0x29",
     difficulty: 2, lessons: [],
     description: "레이저로 정밀 거리를 측정하는 센서 (~2m)",
+    addressWarning: "이 센서는 I2C 주소 0x29를 사용합니다. TSL2591, TCS34725, VL53L0X는 같은 주소를 사용하므로 동시에 연결할 수 없습니다.",
     grove: true,
     shield: {
       grovePort: { name: "I2C1", type: "I2C", position: "left-bottom", color: "#00ff88" },

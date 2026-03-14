@@ -22,16 +22,18 @@ export function generateChatMarkdown(messages, { selectedSensor, shieldMode, lea
     md += '\n';
 
     const modeData = shieldMode ? sensor.shield : sensor.direct;
-    md += `### 배선 정보\n`;
-    modeData.pins.forEach(p => {
-      md += `- ${p.sensor} → ${p.picoName} (${p.pico}번 핀) [${p.label}선]\n`;
-    });
-    if (modeData.warning) {
-      md += `\n> ⚠️ ${modeData.warning}\n`;
-    }
-    md += '\n';
+    if (modeData) {
+      md += `### 배선 정보\n`;
+      modeData.pins.forEach(p => {
+        md += `- ${p.sensor} → ${p.picoName} (${p.pico}번 핀) [${p.label}선]\n`;
+      });
+      if (modeData.warning) {
+        md += `\n> ⚠️ ${modeData.warning}\n`;
+      }
+      md += '\n';
 
-    md += `### 코드\n\`\`\`python\n${modeData.code}\n\`\`\`\n\n`;
+      md += `### 코드\n\`\`\`python\n${modeData.code}\n\`\`\`\n\n`;
+    }
   }
 
   if (learnedTerms && learnedTerms.length > 0) {

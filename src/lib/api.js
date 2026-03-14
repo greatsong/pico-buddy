@@ -3,7 +3,7 @@ const STREAM_TIMEOUT_MS = 30_000; // 스트리밍 응답 제한 시간 (30초)
 
 export async function callClaudeStream(messages, systemPrompt, onChunk) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), STREAM_TIMEOUT_MS);
+  let currentTimeoutId = setTimeout(() => controller.abort(), STREAM_TIMEOUT_MS);
 
   try {
     const res = await fetch('/api/chat', {
@@ -29,8 +29,8 @@ export async function callClaudeStream(messages, systemPrompt, onChunk) {
       if (done) break;
 
       // 데이터를 수신할 때마다 타임아웃 갱신
-      clearTimeout(timeoutId);
-      const renewedTimeoutId = setTimeout(() => controller.abort(), STREAM_TIMEOUT_MS);
+      clearTimeout(currentTimeoutId);
+      currentTimeoutId = setTimeout(() => controller.abort(), STREAM_TIMEOUT_MS);
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
@@ -49,9 +49,6 @@ export async function callClaudeStream(messages, systemPrompt, onChunk) {
           } catch {}
         }
       }
-
-      // 갱신된 타임아웃 정리를 위해 참조 유지
-      clearTimeout(renewedTimeoutId);
     }
 
     return fullText || '응답을 받지 못했습니다.';
@@ -65,6 +62,6 @@ export async function callClaudeStream(messages, systemPrompt, onChunk) {
     // 네트워크 오류 (오프라인, DNS 실패 등)
     throw new Error(`네트워크 오류: ${err.message || '서버에 연결할 수 없습니다.'}`);
   } finally {
-    clearTimeout(timeoutId);
+    clearTimeout(currentTimeoutId);
   }
 }
