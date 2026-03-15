@@ -63,10 +63,10 @@ export default function PicoBoard() {
           </filter>
         </defs>
 
-        {/* USB-C 포트 */}
+        {/* Micro USB 포트 */}
         <rect x={pcbX + 70} y={14} width={60} height={18} rx={4}
           fill="#333" stroke="#555" strokeWidth={1} />
-        <text x={pcbX + 100} y={27} textAnchor="middle" fontSize={8} fill="#888">USB-C</text>
+        <text x={pcbX + 100} y={27} textAnchor="middle" fontSize={8} fill="#888">Micro USB</text>
 
         {/* RP2350 칩 */}
         <rect x={pcbX + 60} y={260} width={80} height={60} rx={4}
