@@ -60,23 +60,23 @@ const CHALLENGES = {
       solution: "조건문으로 온도와 습도 범위를 확인하고, '쾌적해요!' 또는 '환기가 필요해요!'를 출력",
     },
   ],
-  SCD41: [
+  SCD30: [
     {
-      id: "SCD41_predict",
+      id: "SCD30_predict",
       type: "predict",
       emoji: "👥",
       question: "교실에 30명이 있으면 CO2가 높을까요 낮을까요? 왜 그럴까요?",
       followUp: "사람이 숨 쉴 때 CO2를 내보내니까, 사람이 많을수록 CO2가 높아져요!",
     },
     {
-      id: "SCD41_breath",
+      id: "SCD30_breath",
       type: "experiment",
       emoji: "💨",
       question: "센서 앞에서 후~ 불어보세요. CO2 수치가 어떻게 변하나요?",
       followUp: "날숨에는 CO2가 약 4%(40,000ppm)나 들어있어서 수치가 확 올라가요!",
     },
     {
-      id: "SCD41_ventilation",
+      id: "SCD30_ventilation",
       type: "mission",
       emoji: "🪟",
       question: "CO2가 1000ppm을 넘으면 '환기 필요!'를 출력하는 프로그램을 만들어보세요.",

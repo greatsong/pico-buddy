@@ -48,18 +48,18 @@ const COMMON_MISTAKES = {
       fix: "4.7kΩ 풀업 저항을 SDA↔3.3V, SCL↔3.3V에 연결하거나, 코드에서 Pin(6, pull=Pin.PULL_UP) 사용",
     },
   ],
-  SCD41: [
+  SCD30: [
     {
       level: "warn",
-      title: "첫 측정에 5초 이상 걸려요!",
-      desc: "주기적 측정 시작 후 바로 읽으면 데이터가 없어요. 첫 측정까지 5초 대기.",
-      fix: "i2c.writeto(...) 후 time.sleep(5) 넣기",
+      title: "첫 측정에 2초 이상 걸려요!",
+      desc: "연속 측정 시작 후 바로 읽으면 데이터가 없어요. 첫 측정까지 2초 대기.",
+      fix: "i2c.writeto(...) 후 time.sleep(2) 넣기",
     },
     {
       level: "danger",
-      title: "I2C 버스 번호를 확인하세요!",
-      desc: "GP6/GP7은 I2C '1번' 버스예요. I2C(0,...)을 쓰면 에러가 나요!",
-      fix: "코드: I2C(1, sda=Pin(6), scl=Pin(7), freq=100000)",
+      title: "I2C 속도를 50kHz로 낮추세요!",
+      desc: "SCD30은 I2C 클록 스트레칭을 사용해서 높은 속도에서 불안정해요.",
+      fix: "코드: I2C(1, sda=Pin(6), scl=Pin(7), freq=50000)",
     },
     {
       level: "info",

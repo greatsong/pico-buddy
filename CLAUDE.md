@@ -90,7 +90,7 @@ visual-pico/
 ## 핵심 데이터: sensors.js
 
 33종 센서/액추에이터를 7개 카테고리로 분류:
-- 환경 (DHT20, SCD41, SGP30, BMP280, 토양수분 등)
+- 환경 (DHT20, SCD30, SGP30, AHT20+BMP280, 토양수분 등)
 - 소리/진동 (소리, 진동, 부저, 스피커)
 - 빛/색상 (빛, UV, 색상, LED Bar, RGB LED)
 - 거리/움직임 (초음파, PIR, ADXL345)

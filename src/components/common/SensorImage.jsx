@@ -68,7 +68,7 @@ const SENSOR_SVGS = {
     </svg>
   ),
 
-  SCD41: ({ size }) => (
+  SCD30: ({ size }) => (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
       {/* 센서 PCB */}
       <rect x="10" y="12" width="44" height="34" rx="3" fill="#1a4433" stroke="#2a6644" strokeWidth="1" />

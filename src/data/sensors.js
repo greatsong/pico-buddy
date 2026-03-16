@@ -133,12 +133,12 @@ else:
     print("\\u274C 센서를 찾지 못했어요. 배선을 확인하세요.")`,
   },
 
-  SCD41: {
-    id: "SCD41", name: "CO2 센서", model: "SCD41", label: "CO2 측정",
+  SCD30: {
+    id: "SCD30", name: "CO2 센서", model: "SCD30", label: "CO2 측정",
     icon: "💨", color: "#00cc66",
-    category: "환경", protocol: "I2C", address: "0x62",
+    category: "환경", protocol: "I2C", address: "0x61",
     difficulty: 2, lessons: [5],
-    description: "이산화탄소 농도를 정밀 측정하는 환경 센서",
+    description: "이산화탄소 농도를 정밀 측정하는 NDIR 방식 환경 센서",
     grove: true,
     shield: {
       grovePort: { name: "I2C1", type: "I2C", position: "left-bottom", color: "#00ff88" },
@@ -149,54 +149,72 @@ else:
         { sensor: "SCL", pico: 10, picoName: "GP7", gp: 7, wire: "#dddddd", label: "흰색" },
       ],
       warning: null,
-      note: "Grove Shield I2C1 포트 사용. 첫 측정까지 5초 대기 필요.",
+      note: "Grove Shield I2C1 포트 사용. 첫 측정까지 2초 대기 필요.",
       code: `from machine import I2C, Pin
 import time
+import struct
 
 # I2C 통신 설정
-i2c = I2C(1, sda=Pin(6), scl=Pin(7), freq=100000)
-addr = 0x62  # SCD41 주소
+i2c = I2C(1, sda=Pin(6), scl=Pin(7), freq=50000)
+addr = 0x61  # SCD30 주소
 
-# 주기적 측정 시작 명령
-i2c.writeto(addr, bytes([0x21, 0xB1]))
-time.sleep(5)  # 첫 측정 완료 대기 (5초)
+def crc8(data):
+    crc = 0xFF
+    for byte in data:
+        crc ^= byte
+        for _ in range(8):
+            if crc & 0x80:
+                crc = (crc << 1) ^ 0x31
+            else:
+                crc <<= 1
+            crc &= 0xFF
+    return crc
 
-def read_scd41():
+# 연속 측정 시작 (기압 보정 0 = 사용 안 함)
+i2c.writeto(addr, bytes([0x00, 0x10, 0x00, 0x00, 0x81]))
+time.sleep(2)  # 첫 측정 완료 대기
+
+def read_scd30():
     # 데이터 준비 확인
-    i2c.writeto(addr, bytes([0xE4, 0xB8]))
-    time.sleep(0.001)
+    i2c.writeto(addr, bytes([0x02, 0x02]))
+    time.sleep(0.01)
     ready = i2c.readfrom(addr, 3)
-    if (ready[0] << 8 | ready[1]) & 0x07FF == 0:
+    if ready[0] == 0 and ready[1] == 0:
         return None
-    # 측정 데이터 읽기
-    i2c.writeto(addr, bytes([0xEC, 0x05]))
-    time.sleep(0.001)
-    data = i2c.readfrom(addr, 9)
-    co2 = data[0] << 8 | data[1]
-    temp = -45 + 175 * (data[3] << 8 | data[4]) / 65536
-    humi = 100 * (data[6] << 8 | data[7]) / 65536
-    return co2, round(temp, 1), round(humi, 1)
+    # 측정 데이터 읽기 (18바이트)
+    i2c.writeto(addr, bytes([0x03, 0x00]))
+    time.sleep(0.01)
+    data = i2c.readfrom(addr, 18)
+    # CO2 (float, 4바이트)
+    co2 = struct.unpack('>f', bytes([data[0], data[1], data[3], data[4]]))[0]
+    # 온도 (float, 4바이트)
+    temp = struct.unpack('>f', bytes([data[6], data[7], data[9], data[10]]))[0]
+    # 습도 (float, 4바이트)
+    humi = struct.unpack('>f', bytes([data[12], data[13], data[15], data[16]]))[0]
+    return round(co2, 0), round(temp, 1), round(humi, 1)
 
 while True:
-    result = read_scd41()
+    result = read_scd30()
     if result:
         co2, temp, humi = result
-        print(f"CO2: {co2}ppm, 온도: {temp}°C, 습도: {humi}%")
-    time.sleep(5)`,
+        print(f"CO2: {int(co2)}ppm, 온도: {temp}°C, 습도: {humi}%")
+    time.sleep(2)`,
       annotations: [
         { line: 1, text: "I2C 통신과 핀 기능을 가져옵니다" },
-        { line: 5, text: "I2C 1번 버스, 100kHz 속도" },
-        { line: 6, text: "0x62는 SCD41의 주소예요" },
-        { line: 8, text: "센서에게 '계속 측정해!' 명령을 보냅니다" },
-        { line: 9, text: "첫 측정이 끝날 때까지 5초 기다립니다" },
-        { line: 11, text: "측정 데이터를 읽는 함수" },
-        { line: 13, text: "데이터가 준비되었는지 확인하는 명령" },
-        { line: 19, text: "9바이트 측정 데이터 읽기 (CO2 + 온도 + 습도)" },
-        { line: 21, text: "CO2 농도 계산 (단위: ppm)" },
-        { line: 22, text: "온도 계산 (°C)" },
-        { line: 23, text: "습도 계산 (%)" },
-        { line: 28, text: "CO2, 온도, 습도를 화면에 출력" },
-        { line: 30, text: "5초마다 한 번씩 측정 (SCD41 권장 주기)" },
+        { line: 3, text: "struct 모듈로 바이트를 실수(float)로 변환합니다" },
+        { line: 6, text: "I2C 1번 버스, 50kHz (SCD30은 낮은 속도 권장)" },
+        { line: 7, text: "0x61은 SCD30의 주소예요" },
+        { line: 9, text: "CRC 체크섬 함수 (데이터 검증용)" },
+        { line: 22, text: "연속 측정 시작 명령을 보냅니다" },
+        { line: 23, text: "첫 측정이 끝날 때까지 2초 기다립니다" },
+        { line: 25, text: "측정 데이터를 읽는 함수" },
+        { line: 27, text: "데이터가 준비되었는지 확인하는 명령" },
+        { line: 33, text: "18바이트 측정 데이터 읽기 (CO2 + 온도 + 습도)" },
+        { line: 36, text: "CO2 농도를 float로 변환 (단위: ppm)" },
+        { line: 38, text: "온도를 float로 변환 (°C)" },
+        { line: 40, text: "습도를 float로 변환 (%)" },
+        { line: 46, text: "CO2, 온도, 습도를 화면에 출력" },
+        { line: 48, text: "2초마다 한 번씩 측정 (SCD30 기본 주기)" },
       ],
     },
     direct: {
@@ -207,59 +225,60 @@ while True:
         { sensor: "SCL", pico: 10, picoName: "GP7", gp: 7, wire: "#dddddd", label: "흰색" },
       ],
       warning: "4.7kΩ 풀업 저항 2개 필수!",
-      note: "점퍼선 직접 연결. 측정 주기 최소 5초.",
+      note: "점퍼선 직접 연결. 측정 주기 최소 2초.",
       code: `from machine import I2C, Pin
 import time
+import struct
 
 sda = Pin(6, pull=Pin.PULL_UP)
 scl = Pin(7, pull=Pin.PULL_UP)
-i2c = I2C(1, sda=sda, scl=scl, freq=100000)
-addr = 0x62
-i2c.writeto(addr, bytes([0x21, 0xB1]))
-time.sleep(5)
+i2c = I2C(1, sda=sda, scl=scl, freq=50000)
+addr = 0x61
+i2c.writeto(addr, bytes([0x00, 0x10, 0x00, 0x00, 0x81]))
+time.sleep(2)
 
-def read_scd41():
-    i2c.writeto(addr, bytes([0xE4, 0xB8]))
-    time.sleep(0.001)
+def read_scd30():
+    i2c.writeto(addr, bytes([0x02, 0x02]))
+    time.sleep(0.01)
     ready = i2c.readfrom(addr, 3)
-    if (ready[0] << 8 | ready[1]) & 0x07FF == 0:
+    if ready[0] == 0 and ready[1] == 0:
         return None
-    i2c.writeto(addr, bytes([0xEC, 0x05]))
-    time.sleep(0.001)
-    data = i2c.readfrom(addr, 9)
-    co2 = data[0] << 8 | data[1]
-    temp = -45 + 175 * (data[3] << 8 | data[4]) / 65536
-    humi = 100 * (data[6] << 8 | data[7]) / 65536
-    return co2, round(temp, 1), round(humi, 1)
+    i2c.writeto(addr, bytes([0x03, 0x00]))
+    time.sleep(0.01)
+    data = i2c.readfrom(addr, 18)
+    co2 = struct.unpack('>f', bytes([data[0], data[1], data[3], data[4]]))[0]
+    temp = struct.unpack('>f', bytes([data[6], data[7], data[9], data[10]]))[0]
+    humi = struct.unpack('>f', bytes([data[12], data[13], data[15], data[16]]))[0]
+    return round(co2, 0), round(temp, 1), round(humi, 1)
 
 while True:
-    result = read_scd41()
+    result = read_scd30()
     if result:
         co2, temp, humi = result
-        print(f"CO2: {co2}ppm, 온도: {temp}°C, 습도: {humi}%")
-    time.sleep(5)`,
+        print(f"CO2: {int(co2)}ppm, 온도: {temp}°C, 습도: {humi}%")
+    time.sleep(2)`,
       annotations: [
-        { line: 4, text: "직접 연결 — 내부 풀업 저항 활성화" },
-        { line: 6, text: "I2C 1번 버스로 통신 설정" },
+        { line: 5, text: "직접 연결 — 내부 풀업 저항 활성화" },
+        { line: 8, text: "I2C 1번 버스, 50kHz (SCD30 권장)" },
       ],
     },
     initCheck: `# 센서 인식 확인
 from machine import I2C, Pin
-i2c = I2C(1, sda=Pin(6), scl=Pin(7), freq=100000)
+i2c = I2C(1, sda=Pin(6), scl=Pin(7), freq=50000)
 found = i2c.scan()
 print("발견된 장치:", [hex(addr) for addr in found])
-if 0x62 in found:
-    print("\\u2705 SCD41 CO2 센서를 찾았어요!")
+if 0x61 in found:
+    print("\\u2705 SCD30 CO2 센서를 찾았어요!")
 else:
     print("\\u274C 센서를 찾지 못했어요. 배선을 확인하세요.")`,
   },
 
   BMP280: {
-    id: "BMP280", name: "기압 센서", model: "BMP280", label: "기압/고도 측정",
+    id: "BMP280", name: "기압 센서", model: "AHT20+BMP280", label: "기압/고도 측정",
     icon: "🌀", color: "#88ddaa",
     category: "환경", protocol: "I2C", address: "0x76",
     difficulty: 2, lessons: [],
-    description: "대기압과 고도를 측정하는 센서",
+    description: "AHT20(온습도)+BMP280(기압) 콤보 모듈. 기압과 고도를 측정하는 센서",
     grove: true,
     shield: {
       grovePort: { name: "I2C1", type: "I2C", position: "left-bottom", color: "#00ff88" },
@@ -986,11 +1005,11 @@ else:
 
   // ═══════════════════ 소리/진동 (3종) ═══════════════════
   SOUND: {
-    id: "SOUND", name: "소리 센서", model: "Sound Sensor", label: "소음 레벨 측정",
+    id: "SOUND", name: "소리 센서", model: "Grove Analog Microphone (MEMS)", label: "소음 레벨 측정",
     icon: "🎤", color: "#ff6644",
     category: "소리/진동", protocol: "아날로그", address: null,
     difficulty: 1, lessons: [6],
-    description: "주변 소음 레벨을 측정하는 센서",
+    description: "MEMS 마이크로 주변 소음 레벨을 측정하는 센서",
     grove: true,
     shield: {
       grovePort: { name: "A2", type: "아날로그", position: "left-middle", color: "#ffaa00" },
@@ -2450,7 +2469,7 @@ else:
   },
 
   GPS: {
-    id: "GPS", name: "GPS 센서", model: "Air530", label: "위치/속도 측정",
+    id: "GPS", name: "GPS 센서", model: "NEO-6M", label: "위치/속도 측정",
     icon: "🛰️", color: "#006699",
     category: "거리/움직임", protocol: "UART", address: null,
     difficulty: 3, lessons: [],
@@ -3086,33 +3105,35 @@ else:
   },
 
   JOYSTICK: {
-    id: "JOYSTICK", name: "조이스틱", model: "Thumb Joystick", label: "2축 방향 입력",
+    id: "JOYSTICK", name: "조이스틱", model: "PS2 조이스틱 모듈", label: "2축 방향 입력",
     icon: "🕹️", color: "#dd6622",
     category: "입력", protocol: "아날로그", address: null,
     difficulty: 2, lessons: [],
-    description: "X/Y 2축 방향 입력 장치",
-    grove: true,
-    shield: {
-      grovePort: { name: "A0", type: "아날로그", position: "left-top", color: "#ffaa00" },
+    description: "X/Y 2축 방향 입력 + 버튼이 있는 PS2 조이스틱 모듈",
+    grove: false,
+    direct: {
       pins: [
-        { sensor: "VCC", pico: 36, picoName: "3.3V", gp: null, wire: "#ff4444", label: "빨강" },
         { sensor: "GND", pico: 38, picoName: "GND", gp: null, wire: "#666666", label: "검정" },
-        { sensor: "X", pico: 31, picoName: "GP26", gp: 26, wire: "#ffdd00", label: "노랑" },
-        { sensor: "Y", pico: 32, picoName: "GP27", gp: 27, wire: "#dddddd", label: "흰색" },
+        { sensor: "+5V", pico: 40, picoName: "VBUS(5V)", gp: null, wire: "#ff4444", label: "빨강" },
+        { sensor: "VRx", pico: 31, picoName: "GP26", gp: 26, wire: "#ffdd00", label: "노랑" },
+        { sensor: "VRy", pico: 32, picoName: "GP27", gp: 27, wire: "#00cc66", label: "초록" },
+        { sensor: "SW", pico: 24, picoName: "GP18", gp: 18, wire: "#dddddd", label: "흰색" },
       ],
-      warning: "조이스틱은 X, Y 2개의 아날로그 핀이 필요해요. A0 포트에 꽂으면 GP26(X)과 GP27(Y)이 자동 연결돼요.",
-      note: "Grove Shield A0 포트에 꽂으세요. 버튼은 별도 D 포트가 필요해요.",
+      warning: "PS2 조이스틱은 5V 전원이 필요해요! Pico의 VBUS(5V) 핀에 연결하세요. VRx, VRy는 각각 별도의 ADC 핀에 연결해야 해요.",
+      note: "VRx→GP26, VRy→GP27, SW(버튼)→GP18에 점퍼선으로 연결하세요.",
       code: `from machine import ADC, Pin
 import time
 
-# X축: GP26(ADC0), Y축: GP27(ADC1)
-joy_x = ADC(Pin(26))
-joy_y = ADC(Pin(27))
+# VRx: GP26(ADC0), VRy: GP27(ADC1), SW: GP18
+joy_x = ADC(Pin(26))   # VRx 핀
+joy_y = ADC(Pin(27))   # VRy 핀
+button = Pin(18, Pin.IN, Pin.PULL_UP)  # SW 버튼 (누르면 0)
 
 while True:
     # 조이스틱 X, Y 값 읽기
     x = joy_x.read_u16()
     y = joy_y.read_u16()
+    btn = button.value()  # 0=눌림, 1=안 눌림
     # 중앙값(약 32768)을 기준으로 방향 판정
     if x < 15000:
         dir_x = "왼쪽"
@@ -3126,59 +3147,35 @@ while True:
         dir_y = "위"
     else:
         dir_y = "중앙"
-    print(f"X: {x} ({dir_x}), Y: {y} ({dir_y})")
+    pressed = "눌림!" if btn == 0 else ""
+    print(f"X: {x} ({dir_x}), Y: {y} ({dir_y}) {pressed}")
     time.sleep(0.2)`,
       annotations: [
         { line: 1, text: "ADC(아날로그-디지털 변환)와 핀 기능을 가져옵니다" },
         { line: 2, text: "시간 관련 기능을 가져옵니다" },
-        { line: 4, text: "X축은 GP26(ADC0), Y축은 GP27(ADC1)을 사용합니다" },
-        { line: 5, text: "X축 아날로그 입력을 설정합니다" },
-        { line: 6, text: "Y축 아날로그 입력을 설정합니다" },
-        { line: 8, text: "영원히 반복합니다" },
-        { line: 10, text: "X축 아날로그 값을 읽습니다 (0~65535)" },
-        { line: 11, text: "Y축 아날로그 값을 읽습니다 (0~65535)" },
-        { line: 13, text: "중앙값(약 32768) 기준으로 방향을 판정합니다" },
-        { line: 14, text: "X값이 작으면 왼쪽으로 기울인 것" },
-        { line: 16, text: "X값이 크면 오른쪽으로 기울인 것" },
-        { line: 25, text: "X, Y 값과 방향을 출력합니다" },
-        { line: 26, text: "0.2초마다 조이스틱 상태를 읽습니다" },
+        { line: 4, text: "VRx는 GP26(ADC0), VRy는 GP27(ADC1)을 사용합니다" },
+        { line: 5, text: "VRx(X축) 아날로그 입력을 설정합니다" },
+        { line: 6, text: "VRy(Y축) 아날로그 입력을 설정합니다" },
+        { line: 7, text: "SW(버튼)는 디지털 입력, 내부 풀업 저항 사용" },
+        { line: 9, text: "영원히 반복합니다" },
+        { line: 11, text: "VRx 아날로그 값을 읽습니다 (0~65535)" },
+        { line: 12, text: "VRy 아날로그 값을 읽습니다 (0~65535)" },
+        { line: 13, text: "버튼 상태를 읽습니다 (0=눌림, 1=안 눌림)" },
+        { line: 15, text: "중앙값(약 32768) 기준으로 방향을 판정합니다" },
+        { line: 28, text: "버튼이 눌렸으면 '눌림!' 표시" },
+        { line: 29, text: "X, Y 값과 방향, 버튼 상태를 출력합니다" },
+        { line: 30, text: "0.2초마다 조이스틱 상태를 읽습니다" },
       ],
     },
-    direct: {
-      pins: [
-        { sensor: "VCC", pico: 36, picoName: "3.3V", gp: null, wire: "#ff4444", label: "빨강" },
-        { sensor: "GND", pico: 38, picoName: "GND", gp: null, wire: "#666666", label: "검정" },
-        { sensor: "X", pico: 31, picoName: "GP26", gp: 26, wire: "#ffdd00", label: "노랑" },
-        { sensor: "Y", pico: 32, picoName: "GP27", gp: 27, wire: "#dddddd", label: "흰색" },
-      ],
-      warning: null,
-      note: "점퍼선으로 직접 연결. X, Y 각각 ADC 핀에 연결하세요.",
-      code: `from machine import ADC, Pin
-import time
-
-# X축: GP26(ADC0), Y축: GP27(ADC1)
-joy_x = ADC(Pin(26))
-joy_y = ADC(Pin(27))
-
-while True:
-    x = joy_x.read_u16()
-    y = joy_y.read_u16()
-    print(f"X: {x}, Y: {y}")
-    time.sleep(0.2)`,
-      annotations: [
-        { line: 1, text: "ADC와 핀 기능을 가져옵니다" },
-        { line: 4, text: "X축(GP26)과 Y축(GP27)을 ADC로 설정합니다" },
-        { line: 9, text: "X, Y 아날로그 값을 읽습니다" },
-        { line: 11, text: "조이스틱 위치를 출력합니다" },
-      ],
-    },
-    initCheck: `# 조이스틱 테스트
+    initCheck: `# PS2 조이스틱 테스트
 from machine import ADC, Pin
 x = ADC(Pin(26))
 y = ADC(Pin(27))
+btn = Pin(18, Pin.IN, Pin.PULL_UP)
 xv = x.read_u16()
 yv = y.read_u16()
-print(f"X: {xv}, Y: {yv}")
+bv = btn.value()
+print(f"VRx: {xv}, VRy: {yv}, SW: {bv}")
 if 10000 < xv < 55000 and 10000 < yv < 55000:
     print("\\u2705 조이스틱이 중앙에 있어요! 움직여보세요.")
 else:
@@ -3868,7 +3865,7 @@ export const SENSOR_ORDER = [
   // 입력
   "BUTTON", "TOUCH", "ROTARY",
   // 환경 (기초 → 고급)
-  "DHT20", "BMP280", "SCD41", "MOISTURE", "GUVAS12D", "TDS", "HM3301", "MULTIGAS",
+  "DHT20", "BMP280", "SCD30", "MOISTURE", "GUVAS12D", "TDS", "HM3301", "MULTIGAS",
   // 빛/색상
   "LIGHT", "TSL2591", "TCS34725", "IR_RECEIVER",
   // 소리/진동
